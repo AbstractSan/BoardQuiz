@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Quiz</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --ios-blue: #007aff;
+            --ios-green: #34c759;
+            --ios-red: #ff3b30;
+            --glass: rgba(255, 255, 255, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: #050a14;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            color: white;
+        }
+
+        /* Animated Liquid Background */
+        .bg-blobs { position: absolute; width: 100%; height: 100%; z-index: -1; filter: blur(80px); }
+        .blob { position: absolute; border-radius: 50%; animation: move 20s infinite alternate; }
+        .b1 { width: 500px; height: 500px; background: #0047ff; top: -10%; left: -10%; }
+        .b2 { width: 400px; height: 400px; background: #00c2ff; bottom: -10%; right: -5%; animation-delay: -5s; }
+        .b3 { width: 300px; height: 300px; background: #5e5ce6; top: 40%; left: 30%; animation-delay: -2s; }
+
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(100px, 50px) scale(1.2); }
+        }
+
+        /* Glass Container */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 35px;
+            width: 90%;
+            max-width: 800px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            position: relative;
+            min-height: 550px;
+        }
+
+        /* Timer UI */
+        .timer-container {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .timer-circle {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: conic-gradient(var(--ios-blue) 0%, transparent 0%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.2s linear;
+        }
+        .timer-inner {
+            width: 37px;
+            height: 37px;
+            background: #1c1c1e;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        header h1 { font-size: 2.2rem; margin-bottom: 5px; color: #fff; font-weight: 800; }
+        header p { color: rgba(255,255,255,0.5); margin-bottom: 30px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+
+        .btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s cubic-bezier(0.2, 1, 0.2, 1);
+            text-align: left;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-3px); border-color: var(--ios-blue); }
+
+        .high-score-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.65rem;
+            background: var(--ios-green);
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .option {
+            width: 100%; margin-bottom: 12px; padding: 18px; border-radius: 15px; 
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+            color: white; cursor: pointer; transition: 0.2s; text-align: left; font-size: 1rem;
+        }
+        .option:hover:not(:disabled) { background: rgba(255,255,255,0.08); transform: scale(1.01); }
+        .option.correct { background: rgba(52, 199, 89, 0.25); border-color: var(--ios-green); }
+        .option.wrong { background: rgba(255, 59, 48, 0.25); border-color: var(--ios-red); }
+
+        .explanation {
+            background: rgba(0, 122, 255, 0.12); border-left: 4px solid var(--ios-blue);
+            padding: 15px; border-radius: 12px; margin-top: 15px; display: none; animation: fadeIn 0.4s;
+            font-size: 0.95rem; line-height: 1.5;
+        }
+
+        .next-btn {
+            background: var(--ios-blue); color: white; border: none; padding: 14px 30px;
+            border-radius: 15px; font-weight: 700; cursor: pointer; float: right; margin-top: 20px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="bg-blobs">
+        <div class="blob b1"></div>
+        <div class="blob b2"></div>
+        <div class="blob b3"></div>
+    </div>
+
+    <div class="glass-card">
+        <div class="timer-container hidden" id="timer-box">
+            <div class="timer-circle" id="timer-circle">
+                <div class="timer-inner" id="timer-text">30</div>
+            </div>
+        </div>
+
+        <header>
+            <h1 id="main-title">Board Quiz</h1>
+            <p id="sub-title">Select Subject</p>
+        </header>
+
+        <div id="app-content"></div>
+    </div>
+
+    <script>
+        // High Score Storage Helper
+        const getHighScore = (chapter) => localStorage.getItem(`score_${chapter}`) || 0;
+        const saveHighScore = (chapter, score) => {
+            const current = getHighScore(chapter);
+            if (score > current) localStorage.setItem(`score_${chapter}`, score);
+        };
+
+        const quizData = {
+            "Chemistry": {
+                "Chemical Reactions & Equations": [
+                    { q: "What gas is evolved when Zn reacts with H2SO4?", options: ["Oxygen", "CO2", "Hydrogen", "Nitrogen"], answer: 2, explanation: "Active metals displace Hydrogen from dilute acids." },
+                    { q: "Formula of Marble is:", options: ["CaO", "CaCO3", "Ca(OH)2", "CaSO4"], answer: 1, explanation: "Marble is Calcium Carbonate." },
+                    { q: "Mole ratio of H2:O2 in electrolysis of water:", options: ["1:1", "2:1", "1:2", "8:1"], answer: 1, explanation: "2 molecules of Hydrogen for 1 of Oxygen." },
+                    { q: "Substance X used in white washing is:", options: ["CaCO3", "CaO", "Ca(OH)2", "NaOH"], answer: 1, explanation: "Quicklime (CaO) is used." },
+                    { q: "Brown gas on heating Lead Nitrate is:", options: ["NO", "NO2", "N2O", "N2"], answer: 1, explanation: "Thermal decomposition releases NO2 fumes." },
+                    { q: "AgCl is stored in dark bottles to prevent:", options: ["Oxidation", "Reduction", "Photolysis", "Sublimation"], answer: 2, explanation: "Prevents light-induced decomposition." },
+                    { q: "Respiration is an ______ reaction.", options: ["Endothermic", "Exothermic", "Reduction", "None"], answer: 1, explanation: "Energy is released as heat during glucose breakdown." },
+                    { q: "Preventing rancidity in chips is done using:", options: ["Oxygen", "Chlorine", "Nitrogen", "Hydrogen"], answer: 2, explanation: "Nitrogen acts as an antioxidant cushion." },
+                    { q: "Reaction Fe2O3 + 2Al -> Al2O3 + 2Fe is:", options: ["Combination", "Displacement", "Decomposition", "Neutralization"], answer: 1, explanation: "Al is more reactive than Fe." },
+                    { q: "Magnesium ribbon burns with a ______ flame.", options: ["Yellow", "Dazzling White", "Blue", "Red"], answer: 1, explanation: "Standard observation for MgO formation." },
+                    { q: "Fatty food turns rancid due to:", options: ["Hydration", "Oxidation", "Corrosion", "Reduction"], answer: 1, explanation: "Oxidation creates bad smell/taste." },
+                    { q: "Precipitation reactions create:", options: ["Soluble salt", "Insoluble salt", "Gas", "Acid"], answer: 1, explanation: "Insoluble solid is the 'precipitate'." },
+                    { q: "Chemical formula of Rust:", options: ["Fe3O4", "Fe2O3.xH2O", "Fe(OH)2", "FeO"], answer: 1, explanation: "Hydrated Ferric Oxide." },
+                    { q: "CuO + H2 -> Cu + H2O. What is reduced?", options: ["CuO", "H2", "Cu", "H2O"], answer: 0, explanation: "CuO loses oxygen, hence reduced." },
+                    { q: "Souring of milk is a ______ change.", options: ["Physical", "Chemical", "Reversible", "None"], answer: 1, explanation: "New substance (Lactic Acid) is formed." }
+                ],
+                "Acids, Bases and Salts": [
+                    { q: "pH of basic solution is:", options: ["7", "Below 7", "Above 7", "0"], answer: 2, explanation: "Bases have pH > 7." },
+                    { q: "Acid in Nettle sting:", options: ["Acetic", "Methanoic", "Citric", "Oxalic"], answer: 1, explanation: "Also called Formic acid." },
+                    { q: "Tooth enamel is made of:", options: ["Calcium Phosphate", "Calcium Carbonate", "Silica", "Gold"], answer: 0, explanation: "Hardest material in human body." },
+                    { q: "pH of human body is:", options: ["5-6", "7.0-7.8", "8-9", "4.5"], answer: 1, explanation: "Body works within narrow neutral range." },
+                    { q: "PoP formula:", options: ["CaSO4.2H2O", "CaSO4.1/2H2O", "CaSO4.H2O", "2CaSO4.H2O"], answer: 1, explanation: "Calcium Sulphate Hemihydrate." },
+                    { q: "Common salt chemical name:", options: ["NaOH", "Na2CO3", "NaCl", "NaHCO3"], answer: 2, explanation: "Sodium Chloride." },
+                    { q: "Antacids neutralize:", options: ["Base", "Excess Acid", "Water", "Saliva"], answer: 1, explanation: "Mg(OH)2 is a common example." },
+                    { q: "Turmeric turns ______ in base.", options: ["Yellow", "Reddish Brown", "Pink", "Blue"], answer: 1, explanation: "Natural indicator test." },
+                    { q: "Gas released by Acid + Metal:", options: ["CO2", "H2", "O2", "Cl2"], answer: 1, explanation: "Hydrogen gas is evolved." },
+                    { q: "Acid + Base -> Salt + Water is:", options: ["Reduction", "Neutralization", "Oxidation", "Addition"], answer: 1, explanation: "Protons and Hydroxyls form water." },
+                    { q: "pH of rainwater to be called 'Acid Rain':", options: ["Below 5.6", "Below 7", "Exactly 6", "Above 8"], answer: 0, explanation: "Caused by SO2 and NO2 pollution." },
+                    { q: "Main ingredient of Washing Soda:", options: ["NaCl", "NaHCO3", "Na2CO3.10H2O", "CaO"], answer: 2, explanation: "Sodium Carbonate Decahydrate." },
+                    { q: "Bleaching powder smells of:", options: ["Ammonia", "Chlorine", "Vinegar", "Rotten Eggs"], answer: 1, explanation: "Releases Chlorine on exposure to air." },
+                    { q: "Which acid is in Tomato?", options: ["Citric", "Oxalic", "Tartaric", "Acetic"], answer: 1, explanation: "Oxalic acid is present." },
+                    { q: "Sodium hydroxide turns Phenolphthalein:", options: ["Colorless", "Pink", "Blue", "Red"], answer: 1, explanation: "Bases turn phenolphthalein pink." }
+                ],
+                "Metals and Non-metals": [
+                    { q: "Liquid metal at room temperature:", options: ["Sodium", "Mercury", "Galium", "Tin"], answer: 1, explanation: "Mercury (Hg) is liquid." },
+                    { q: "Non-metal conducting electricity:", options: ["Diamond", "Graphite", "Iodine", "Sulphur"], answer: 1, explanation: "Graphite has delocalized electrons." },
+                    { q: "Amphoteric oxide example:", options: ["Na2O", "Al2O3", "MgO", "CO2"], answer: 1, explanation: "Reacts with both acid and base." },
+                    { q: "Aqua Regia ratio (HCl:HNO3):", options: ["1:3", "3:1", "1:1", "2:1"], answer: 1, explanation: "3 parts conc. HCl, 1 part HNO3." },
+                    { q: "Most malleable metal:", options: ["Silver", "Gold", "Aluminium", "Copper"], answer: 1, explanation: "Gold can be beaten into thinnest sheets." },
+                    { q: "Sulphide ores are refined by:", options: ["Calcination", "Roasting", "Electrolysis", "Smelting"], answer: 1, explanation: "Heating in excess air." },
+                    { q: "Galvanization uses:", options: ["Tin", "Zinc", "Lead", "Nickel"], answer: 1, explanation: "Zinc coating prevents rust." },
+                    { q: "An alloy of Mercury is:", options: ["Bronze", "Solder", "Amalgam", "Brass"], answer: 2, explanation: "Amalgam involves Mercury." },
+                    { q: "Highest melting point metal:", options: ["Iron", "Tungsten", "Osmium", "Gold"], answer: 1, explanation: "Used in bulb filaments." },
+                    { q: "Reaction of steam with Iron gives:", options: ["FeO", "Fe2O3", "Fe3O4", "None"], answer: 2, explanation: "Magnetic oxide is formed." },
+                    { q: "Bronze is an alloy of:", options: ["Cu + Zn", "Cu + Sn", "Pb + Sn", "Cu + Ni"], answer: 1, explanation: "Copper and Tin." },
+                    { q: "Non-metal which is lustrous:", options: ["Sulphur", "Carbon", "Iodine", "Oxygen"], answer: 2, explanation: "Iodine crystals are shiny." },
+                    { q: "Ionic compounds are ______ in water.", options: ["Insoluble", "Soluble", "Sparingly soluble", "None"], answer: 1, explanation: "Due to high polarity of water." },
+                    { q: "Thermite reaction uses:", options: ["Copper", "Aluminium", "Zinc", "Lead"], answer: 1, explanation: "Fe2O3 + Al used to join rail tracks." },
+                    { q: "Carbonate ores are processed by:", options: ["Roasting", "Calcination", "Froth Floatation", "Reduction"], answer: 1, explanation: "Heating in limited air." }
+                ],
+                "Carbon and its Compounds": [
+                    { q: "Valency of Carbon:", options: ["2", "3", "4", "6"], answer: 2, explanation: "Tetravalency is unique to carbon." },
+                    { q: "Functional group -CHO is:", options: ["Alcohol", "Ketone", "Aldehyde", "Carboxylic Acid"], answer: 2, explanation: "Aldehyde group." },
+                    { q: "Covalent bonds involve:", options: ["Sharing", "Transfer", "Losing", "Gaining"], answer: 0, explanation: "Mutual sharing of electrons." },
+                    { q: "Main gas in CNG:", options: ["Ethane", "Methane", "Propane", "Butane"], answer: 1, explanation: "Methane (CH4) is the major part." },
+                    { q: "General formula for Alkenes:", options: ["CnH2n+2", "CnH2n", "CnH2n-2", "CnHn"], answer: 1, explanation: "Contains one double bond." },
+                    { q: "Esterification gives a ______ smell.", options: ["Rotten", "Sweet/Fruity", "Pungent", "No smell"], answer: 1, explanation: "Esters are used in perfumes." },
+                    { q: "Hydrophilic end of soap is:", options: ["Water loving", "Oil loving", "Dust loving", "Acid loving"], answer: 0, explanation: "Ionic part of soap molecule." },
+                    { q: "Allotrope of Carbon in football shape:", options: ["Diamond", "Graphite", "Fullerene", "Coke"], answer: 2, explanation: "Buckminsterfullerene (C-60)." },
+                    { q: "Ethanoic acid common name:", options: ["Formic acid", "Acetic acid", "Propionic", "Butyric"], answer: 1, explanation: "Main component of vinegar." },
+                    { q: "Saturated hydrocarbons burn with:", options: ["Sooty flame", "Blue flame", "Yellow flame", "Red flame"], answer: 1, explanation: "Complete combustion occurs." },
+                    { q: "Denatured alcohol contains:", options: ["Water", "Methanol", "Sugar", "Salt"], answer: 1, explanation: "Added to make it unfit for drinking." },
+                    { q: "Unsaturated compounds undergo ______ reactions.", options: ["Substitution", "Addition", "Elimination", "Rearrangement"], answer: 1, explanation: "Hydrogenation is an example." },
+                    { q: "Hard water reaction with soap forms:", options: ["Lather", "Scum", "Steam", "Ice"], answer: 1, explanation: "Insoluble precipitate." },
+                    { q: "Carbon form used in pencils:", options: ["Diamond", "Coke", "Graphite", "Coal"], answer: 2, explanation: "Graphite is soft and slippery." },
+                    { q: "Successive members of homologous series differ by:", options: ["CH3", "CH2", "CH4", "C2H2"], answer: 1, explanation: "Difference is 14 mass units." }
+                ]
+            },
+            "Biology": {
+                "Life Processes": [
+                    { q: "Xylem transports:", options: ["Food", "Water", "Amino acids", "Oxygen"], answer: 1, explanation: "Transpiration pull moves water." },
+                    { q: "Pyruvate breakdown in mitochondria gives:", options: ["Lactic acid", "Ethanol", "CO2, H2O, Energy", "Glucose"], answer: 2, explanation: "This is aerobic respiration." },
+                    { q: "Kidneys are part of:", options: ["Nutrition", "Excretion", "Respiration", "Movement"], answer: 1, explanation: "Removal of nitrogenous waste." },
+                    { q: "Autotrophic nutrition needs:", options: ["CO2", "Chlorophyll", "Sunlight", "All of these"], answer: 3, explanation: "Photosynthesis requirement." },
+                    { q: "Saliva contains ______ enzyme.", options: ["Pepsin", "Amylase", "Trypsin", "Lipase"], answer: 1, explanation: "Breaks starch to sugar." },
+                    { q: "Villi increase area for:", options: ["Digestion", "Absorption", "Excretion", "Ingestion"], answer: 1, explanation: "In the small intestine." },
+                    { q: "Blood pressure device:", options: ["Stethoscope", "Barometer", "Sphygmomanometer", "ECG"], answer: 2, explanation: "Measures systolic/diastolic pressure." },
+                    { q: "Unit of filtration in kidney:", options: ["Neuron", "Nephron", "Ureter", "Alveoli"], answer: 1, explanation: "Functional unit." },
+                    { q: "Bile is made in:", options: ["Gall bladder", "Stomach", "Liver", "Pancreas"], answer: 2, explanation: "Stored in gall bladder, made in liver." },
+                    { q: "Gas exchange in plants via:", options: ["Stem", "Stomata", "Roots", "Flower"], answer: 1, explanation: "Pores on leaves." },
+                    { q: "ATP is:", options: ["Protein", "Vitamin", "Energy currency", "Hormone"], answer: 2, explanation: "Fuel for cellular work." },
+                    { q: "Veins carry blood ______ heart.", options: ["Away from", "Towards", "Neither", "Both"], answer: 1, explanation: "Usually carry deoxygenated blood." },
+                    { q: "Phloem moves food via:", options: ["Transpiration", "Translocation", "Evaporation", "Osmosis"], answer: 1, explanation: "Active transport of sugars." },
+                    { q: "Pepsin works in ______ medium.", options: ["Basic", "Acidic", "Neutral", "None"], answer: 1, explanation: "HCl in stomach activates it." },
+                    { q: "Anaerobic respiration in yeast gives:", options: ["Lactic acid", "Ethanol + CO2", "Oxygen", "Water"], answer: 1, explanation: "Fermentation process." }
+                ],
+                "Control and Coordination": [
+                    { q: "Gap between neurons:", options: ["Axon", "Dendrite", "Synapse", "Myelin"], answer: 2, explanation: "Chemical signal bridge." },
+                    { q: "Posture part of brain:", options: ["Cerebrum", "Cerebellum", "Medulla", "Pons"], answer: 1, explanation: "Controls balance." },
+                    { q: "Inhibiting growth hormone (plant):", options: ["Auxin", "Cytokinin", "ABA", "Gibberellin"], answer: 2, explanation: "Abscisic acid." },
+                    { q: "Emergency hormone:", options: ["Thyroxine", "Insulin", "Adrenaline", "Estrogen"], answer: 2, explanation: "Fight or flight response." },
+                    { q: "Iodine deficiency causes:", options: ["Diabetes", "Goitre", "Scurvy", "Rickets"], answer: 1, explanation: "Affects Thyroxine production." },
+                    { q: "Master Gland:", options: ["Adrenal", "Thyroid", "Pituitary", "Pancreas"], answer: 2, explanation: "Controls other glands." },
+                    { q: "Insulin controls:", options: ["Height", "Blood Sugar", "Heart Rate", "Digestion"], answer: 1, explanation: "Secreted by pancreas." },
+                    { q: "Spinal cord protected by:", options: ["Skull", "Vertebral Column", "Ribs", "Skin"], answer: 1, explanation: "Hard bony casing." },
+                    { q: "Response to Gravity (plant):", options: ["Phototropism", "Geotropism", "Hydrotropism", "Chemotropism"], answer: 1, explanation: "Roots move downwards." },
+                    { q: "Reflex action managed by:", options: ["Brain", "Spinal Cord", "Liver", "Lungs"], answer: 1, explanation: "Quick subconscious response." },
+                    { q: "Phototropism is response to:", options: ["Water", "Touch", "Light", "Chemical"], answer: 2, explanation: "Shoots grow toward light." },
+                    { q: "Part of brain for thinking:", options: ["Forebrain", "Midbrain", "Hindbrain", "Spinal Cord"], answer: 0, explanation: "Specifically Cerebrum." },
+                    { q: "Testosterone produced in:", options: ["Ovaries", "Testes", "Adrenal", "Liver"], answer: 1, explanation: "Male sex hormone." },
+                    { q: "Plant hormone for cell division:", options: ["Auxin", "Cytokinin", "ABA", "Ethylene"], answer: 1, explanation: "Common in fruit/seeds." },
+                    { q: "Medulla controls:", options: ["Thinking", "Walking", "Blood Pressure", "Balance"], answer: 2, explanation: "Involuntary actions." }
+                ],
+                "How do Organisms Reproduce?": [
+                    { q: "Hydra reproduces by:", options: ["Fission", "Budding", "Spore", "Sexual"], answer: 1, explanation: "Develops an outgrowth." },
+                    { q: "Male gametes in plants are in:", options: ["Ovary", "Stigma", "Pollen", "Style"], answer: 2, explanation: "Produced in anther." },
+                    { q: "Female sex hormone:", options: ["Testosterone", "Estrogen", "Adrenaline", "Insulin"], answer: 1, explanation: "Progesterone is another." },
+                    { q: "Placenta provides ______ to fetus.", options: ["Nutrition", "Oxygen", "Waste removal", "All"], answer: 3, explanation: "Bridge between mother and child." },
+                    { q: "Amoeba reproduces via:", options: ["Budding", "Binary Fission", "Multiple Fission", "Sexual"], answer: 1, explanation: "One cell splits into two." },
+                    { q: "Common duct for urine and sperm:", options: ["Ureter", "Vas deferens", "Urethra", "Bladder"], answer: 2, explanation: "Unique to males." },
+                    { q: "DNA copying is crucial for:", options: ["Movement", "Variation", "Digestion", "Vision"], answer: 1, explanation: "Basis of heredity." },
+                    { q: "Contraceptive used for STDs:", options: ["Pills", "Copper-T", "Condom", "Surgery"], answer: 2, explanation: "Physical barrier protection." },
+                    { q: "Male part of flower:", options: ["Carpel", "Sepal", "Stamen", "Petal"], answer: 2, explanation: "Consists of anther and filament." },
+                    { q: "Gestation period in humans:", options: ["7 months", "8 months", "9 months", "10 months"], answer: 2, explanation: "Approx 280 days." },
+                    { q: "Multiple fission occurs in:", options: ["Amoeba", "Plasmodium", "Hydra", "Yeast"], answer: 1, explanation: "Malarial parasite." },
+                    { q: "Fragmentation seen in:", options: ["Planaria", "Spirogyra", "Bread mould", "Human"], answer: 1, explanation: "Algae breaks into pieces." },
+                    { q: "Regeneration is shown by:", options: ["Amoeba", "Planaria", "Lion", "Rose"], answer: 1, explanation: "Can grow back full body." },
+                    { q: "Surgical block of fallopian tube:", options: ["Vasectomy", "Tubectomy", "IUCD", "MTP"], answer: 1, explanation: "Female sterilization." },
+                    { q: "Puberty age in girls usually:", options: ["5-8", "10-12", "18-21", "25-30"], answer: 1, explanation: "Early adolescence." }
+                ],
+                "Heredity": [
+                    { q: "Mendel's experiment plant:", options: ["Rose", "Potato", "Garden Pea", "Wheat"], answer: 2, explanation: "Chosen for clear traits." },
+                    { q: "Unit of heredity:", options: ["Nucleus", "Gene", "Cell", "Blood"], answer: 1, explanation: "Segment of DNA." },
+                    { q: "Chromosomes in human cell:", options: ["23", "46", "22", "44"], answer: 1, explanation: "23 pairs total." },
+                    { q: "Sex determined by Father's ______.", options: ["Age", "X/Y Chromosome", "Health", "Food"], answer: 1, explanation: "Father gives either X or Y." },
+                    { q: "Recessive trait seen only in:", options: ["Heterozygous", "Homozygous", "Dominant", "Always"], answer: 1, explanation: "Must have two identical recessive alleles." },
+                    { q: "F2 Phenotypic ratio (Monohybrid):", options: ["1:2:1", "3:1", "9:3:3:1", "1:1"], answer: 1, explanation: "3 Dominant : 1 Recessive." },
+                    { q: "Genetic makeup of organism:", options: ["Phenotype", "Genotype", "Ecology", "Taxonomy"], answer: 1, explanation: "The actual DNA code." },
+                    { q: "Acquired traits are ______.", options: ["Inherited", "Non-inherited", "Lethal", "Dominant"], answer: 1, explanation: "Skills aren't passed in DNA." },
+                    { q: "Term 'Genetics' coined by:", options: ["Mendel", "Darwin", "Bateson", "Morgan"], answer: 2, explanation: "W. Bateson (1905)." },
+                    { q: "Tall (TT) x Short (tt) -> F1 is:", options: ["All Tall", "All Short", "Medium", "Mixed"], answer: 0, explanation: "Tallness is dominant." },
+                    { q: "Dihybrid F2 ratio:", options: ["3:1", "1:2:1", "9:3:3:1", "1:1"], answer: 2, explanation: "Cross of two different traits." },
+                    { q: "Sex chromosomes in human male:", options: ["XX", "XY", "YY", "XO"], answer: 1, explanation: "Males are heterogametic." },
+                    { q: "Alternative forms of a gene:", options: ["Alleles", "Chromosomes", "Histones", "Trait"], answer: 0, explanation: "e.g., T and t." },
+                    { q: "Evolution is caused by ______.", options: ["Diet", "Variation + Selection", "Sleep", "Reading"], answer: 1, explanation: "Biological change over time." },
+                    { q: "Visible trait of organism:", options: ["Genotype", "Phenotype", "Nucleus", "Isomer"], answer: 1, explanation: "Observable characteristics." }
+                ],
+                "Our Environment": [
+                    { q: "Decomposers are:", options: ["Plants", "Insects", "Bacteria/Fungi", "Birds"], answer: 2, explanation: "Break down organic waste." },
+                    { q: "Energy transfer law:", options: ["1%", "10%", "50%", "100%"], answer: 1, explanation: "10% Law by Lindeman." },
+                    { q: "Ozone depletion cause:", options: ["CO2", "CFCs", "CH4", "N2O"], answer: 1, explanation: "Chlorofluorocarbons." },
+                    { q: "Ecosystem energy flow is:", options: ["Cyclic", "Unidirectional", "Multidirectional", "Zero"], answer: 1, explanation: "Sun to producers to consumers." },
+                    { q: "Trophic level of herbivores:", options: ["First", "Second", "Third", "Fourth"], answer: 1, explanation: "Primary consumers." },
+                    { q: "Biodegradable item:", options: ["Plastic", "Glass", "Paper", "Metal"], answer: 2, explanation: "Can be broken by microbes." },
+                    { q: "Ozone is formed by ______ rays.", options: ["Infrared", "UV", "X-rays", "Gamma"], answer: 1, explanation: "Photolysis of Oxygen." },
+                    { q: "Biomagnification is max in:", options: ["Plants", "Herbivores", "Top Carnivores", "Water"], answer: 2, explanation: "Concentrates up the chain." },
+                    { q: "UNEP full form:", options: ["Env. Project", "Env. Programme", "Env. Power", "None"], answer: 1, explanation: "Global environment body." },
+                    { q: "Maximum energy at trophic level:", options: ["Producer", "Herbivore", "Carnivore", "Decomposer"], answer: 0, explanation: "Always at the base." },
+                    { q: "Greenhouse gas:", options: ["Oxygen", "Nitrogen", "CO2", "Argon"], answer: 2, explanation: "Traps heat in atmosphere." },
+                    { q: "Example of man-made ecosystem:", options: ["Pond", "Forest", "Aquarium", "Lake"], answer: 2, explanation: "Artificial habitat." },
+                    { q: "Acid rain pH:", options: ["5.6 or lower", "7", "8.5", "10"], answer: 0, explanation: "Highly acidic." },
+                    { q: "Functional unit of environment:", options: ["Population", "Ecosystem", "Biome", "Biosphere"], answer: 1, explanation: "Living/Non-living interaction." },
+                    { q: "DDT banning reason:", options: ["Odor", "Biomagnification", "Color", "Ineffectiveness"], answer: 1, explanation: "Accumulates in top predators." }
+                ]
+            },
+            "Physics": {
+                "Light – Reflection & Refraction": [
+                    { q: "Plane mirror focal length:", options: ["Zero", "25cm", "Infinity", "10cm"], answer: 2, explanation: "Infinite radius." },
+                    { q: "Speed of light in vacuum:", options: ["3x10^8 m/s", "2x10^8 m/s", "3x10^5 m/s", "1x10^8 m/s"], answer: 0, explanation: "Maximum speed limit." },
+                    { q: "Mirror for dental checkup:", options: ["Plane", "Concave", "Convex", "None"], answer: 1, explanation: "Gives enlarged virtual image." },
+                    { q: "Power unit of lens:", options: ["Metre", "Watt", "Dioptre", "Newton"], answer: 2, explanation: "Reciprocal of focal length." },
+                    { q: "Refractive index of diamond:", options: ["1.33", "1.50", "2.42", "1.00"], answer: 2, explanation: "Highest common index." },
+                    { q: "Image by convex mirror is always:", options: ["Real", "Diminished & Virtual", "Enlarged", "Inverted"], answer: 1, explanation: "Used in rear-view mirrors." },
+                    { q: "Snell's Law formula:", options: ["sin i / sin r", "v/u", "1/f", "i = r"], answer: 0, explanation: "Law of refraction." },
+                    { q: "R and f relationship:", options: ["R = f", "R = 2f", "f = 2R", "R = f/2"], answer: 1, explanation: "Radius is twice focal length." },
+                    { q: "Lens for correcting Myopia:", options: ["Concave", "Convex", "Cylindrical", "Bifocal"], answer: 0, explanation: "Diverging lens needed." },
+                    { q: "Magnification of plane mirror:", options: ["+1", "-1", "0", "Infinity"], answer: 0, explanation: "Same size, erect." },
+                    { q: "Diverging mirror is:", options: ["Concave", "Convex", "Plane", "Parabolic"], answer: 1, explanation: "Convex reflects outward." },
+                    { q: "Lens formula:", options: ["1/v - 1/u = 1/f", "1/v + 1/u = 1/f", "v/u = f", "None"], answer: 0, explanation: "Minus for lens, plus for mirror." },
+                    { q: "Power of -2.0 D lens (focal length):", options: ["-50 cm", "+50 cm", "-20 cm", "-2 m"], answer: 0, explanation: "f = 1/P." },
+                    { q: "Unit of refractive index:", options: ["Dioptre", "Metre", "No Unit", "Degree"], answer: 2, explanation: "It is a ratio." },
+                    { q: "Light bends toward normal when going from:", options: ["Rare to Dense", "Dense to Rare", "Air to Vacuum", "None"], answer: 0, explanation: "Slows down in dense medium." }
+                ],
+                "Human Eye & Colourful World": [
+                    { q: "Near point for normal eye:", options: ["25 m", "25 cm", "Infinity", "10 cm"], answer: 1, explanation: "Least distance of distinct vision." },
+                    { q: "Twinkling stars due to:", options: ["Scattering", "Refraction", "Atm. Refraction", "Dispersion"], answer: 2, explanation: "Moving air layers." },
+                    { q: "Color scattered least:", options: ["Blue", "Yellow", "Red", "Green"], answer: 2, explanation: "Longest wavelength." },
+                    { q: "Rainbow is due to:", options: ["Refraction", "Dispersion", "Total Int. Reflection", "All"], answer: 3, explanation: "Complex interaction in raindrops." },
+                    { q: "Part controlling light in eye:", options: ["Retina", "Cornea", "Iris/Pupil", "Optic Nerve"], answer: 2, explanation: "Iris adjusts opening." },
+                    { q: "Image forms on:", options: ["Lens", "Cornea", "Retina", "Iris"], answer: 2, explanation: "Screen of the eye." },
+                    { q: "Hypermetropia correction:", options: ["Concave", "Convex", "Bifocal", "None"], answer: 1, explanation: "Converging lens." },
+                    { q: "Splitting of light into 7 colors:", options: ["Scattering", "Dispersion", "Reflection", "Diffraction"], answer: 1, explanation: "VIBGYOR effect." },
+                    { q: "Far point of normal eye:", options: ["100 m", "1 km", "Infinity", "25 cm"], answer: 2, explanation: "Can see stars." },
+                    { q: "Tyndall effect is due to:", options: ["Reflection", "Refraction", "Scattering", "Dispersion"], answer: 2, explanation: "Light hitting particles." },
+                    { q: "Myopia correction lens:", options: ["Convex", "Concave", "Plane", "Bifocal"], answer: 1, explanation: "Concave lens." },
+                    { q: "Danger signals are Red because:", options: ["High Speed", "Least Scattered", "Looks Good", "Warm Color"], answer: 1, explanation: "Visible through fog/smoke." },
+                    { q: "Blue sky reason:", options: ["Ocean reflection", "Blue air", "Scattering", "Dispersion"], answer: 2, explanation: "Short waves scatter more." },
+                    { q: "Defect due to old age:", options: ["Myopia", "Hypermetropia", "Presbyopia", "Cataract"], answer: 2, explanation: "Loss of accommodation." },
+                    { q: "White light enters prism, ______ bends most.", options: ["Red", "Violet", "Green", "Yellow"], answer: 1, explanation: "Highest frequency/shortest wave." }
+                ],
+                "Electricity": [
+                    { q: "Current unit:", options: ["Volt", "Ampere", "Ohm", "Watt"], answer: 1, explanation: "Coulombs per second." },
+                    { q: "Ohm's Law:", options: ["V=IR", "V=I/R", "I=VR", "R=VI"], answer: 0, explanation: "Linear relation." },
+                    { q: "Resistance depends on:", options: ["Length", "Area", "Material", "All"], answer: 3, explanation: "R = pL/A." },
+                    { q: "1 kWh = ______ Joules.", options: ["3.6x10^6", "36x10^5", "3.6x10^5", "Both 1&2"], answer: 3, explanation: "Commercial unit." },
+                    { q: "Ammeter connection:", options: ["Series", "Parallel", "Mixed", "None"], answer: 0, explanation: "Measures total current." },
+                    { q: "Fuse wire has:", options: ["High Melting Point", "Low Melting Point", "High Resistance", "Both 2&3"], answer: 3, explanation: "Protects by melting." },
+                    { q: "Device to change resistance:", options: ["Ammeter", "Rheostat", "Voltmeter", "Motor"], answer: 1, explanation: "Variable resistor." },
+                    { q: "Power formula:", options: ["VI", "I^2R", "V^2/R", "All"], answer: 3, explanation: "Multiple derivations." },
+                    { q: "Resistivity unit:", options: ["Ohm", "Ohm-m", "Watt", "Volt"], answer: 1, explanation: "Material constant." },
+                    { q: "Filament material:", options: ["Copper", "Iron", "Tungsten", "Silver"], answer: 2, explanation: "Highest melting point." },
+                    { q: "Resistance of ideal ammeter:", options: ["High", "Infinity", "Zero", "1 Ohm"], answer: 2, explanation: "Must not restrict flow." },
+                    { q: "Voltage unit:", options: ["Amp", "Volt", "Coulomb", "Joule"], answer: 1, explanation: "Energy per charge." },
+                    { q: "Series resistance:", options: ["R1+R2", "1/R1+1/R2", "R1*R2", "R1/R2"], answer: 0, explanation: "Additive." },
+                    { q: "Current in parallel ______.", options: ["Is same", "Divides", "Stops", "Doubles"], answer: 1, explanation: "Depends on branch resistance." },
+                    { q: "Joule's Heating Law:", options: ["H = I^2Rt", "H = IRt", "H = Vt", "None"], answer: 0, explanation: "Standard heat formula." }
+                ],
+                "Magnetic Effects": [
+                    { q: "Field around straight wire:", options: ["Straight", "Circles", "Parabolic", "None"], answer: 1, explanation: "Concentric pattern." },
+                    { q: "DC frequency in India:", options: ["50Hz", "60Hz", "0Hz", "100Hz"], answer: 2, explanation: "DC has no frequency." },
+                    { q: "Right Hand Thumb Rule gives:", options: ["Force", "Field direction", "Current", "Voltage"], answer: 1, explanation: "Magnetic field lines." },
+                    { q: "AC frequency in India:", options: ["50Hz", "60Hz", "220Hz", "100Hz"], answer: 0, explanation: "Cycles per second." },
+                    { q: "Device detecting current:", options: ["Ammeter", "Motor", "Galvanometer", "Generator"], answer: 2, explanation: "Shows presence/direction." },
+                    { q: "Fuse works on ______ effect.", options: ["Magnetic", "Heating", "Chemical", "Mechanical"], answer: 1, explanation: "Melts due to heat." },
+                    { q: "Earth wire color:", options: ["Red", "Black", "Green", "Yellow"], answer: 2, explanation: "Standard safety color." },
+                    { q: "Solenoid inside field is ______.", options: ["Zero", "Uniform", "Non-uniform", "Weak"], answer: 1, explanation: "Parallel straight lines." },
+                    { q: "Fleming's Left Hand Rule Thumb:", options: ["Current", "Field", "Force/Motion", "Voltage"], answer: 2, explanation: "Used in motors." },
+                    { q: "Soft iron core makes an ______.", options: ["Alloy", "Electromagnet", "Permanent magnet", "Insulator"], answer: 1, explanation: "Temporarily magnetic." },
+                    { q: "Safety device in circuits:", options: ["Switch", "Fuse/MCB", "Bulb", "Ammeter"], answer: 1, explanation: "Prevents fire/shocks." },
+                    { q: "Magnetic field lines ______ intersect.", options: ["Always", "Never", "Sometimes", "At poles"], answer: 1, explanation: "Direction is unique." },
+                    { q: "Generator works on ______ principle.", options: ["Heating", "EMI", "Static", "Chemical"], answer: 1, explanation: "Electro-magnetic Induction." },
+                    { q: "Material for permanent magnet:", options: ["Soft iron", "Steel/Alnico", "Copper", "Zinc"], answer: 1, explanation: "Retains magnetism." },
+                    { q: "Domestic voltage in India:", options: ["110V", "220V", "440V", "12V"], answer: 1, explanation: "Standard AC supply." }
+                ]
+            }
+        };
+
+        let currentS = "", currentC = "", currentI = 0, score = 0, timerObj = null, timeLeft = 30;
+        const app = document.getElementById('app-content');
+        const title = document.getElementById('main-title');
+        const sub = document.getElementById('sub-title');
+        const timerBox = document.getElementById('timer-box');
+
+        function startTimer() {
+            clearInterval(timerObj);
+            timeLeft = 30;
+            updateTimerUI();
+            timerObj = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                if (timeLeft <= 0) {
+                    clearInterval(timerObj);
+                    check(-1); 
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-text').innerText = timeLeft;
+            const percent = (timeLeft / 30) * 100;
+            document.getElementById('timer-circle').style.background = `conic-gradient(var(--ios-blue) ${percent}%, transparent 0%)`;
+        }
+
+        function init() {
+            timerBox.classList.add('hidden');
+            title.innerText = "Board Quiz";
+            sub.innerText = "Select Subject";
+            let html = '<div class="grid">';
+            Object.keys(quizData).forEach(s => html += `<button class="btn" onclick="showCh('${s}')">${s}</button>`);
+            app.innerHTML = html + '</div>';
+        }
+
+        function showCh(s) {
+            currentS = s;
+            sub.innerText = `${s} Revision`;
+            let html = '<div class="grid">';
+            Object.keys(quizData[s]).forEach(c => {
+                const best = getHighScore(c);
+                html += `
+                <button class="btn" onclick="startQ('${c}')">
+                    ${c}
+                    ${best > 0 ? `<span class="high-score-tag">Best: ${best}</span>` : ''}
+                </button>`;
+            });
+            app.innerHTML = html + `</div><button class="next-btn" onclick="init()" style="float:none; width:100%; background:rgba(255,255,255,0.1); margin-top:20px;">Back</button>`;
+        }
+
+        function startQ(c) {
+            currentC = c; currentI = 0; score = 0;
+            timerBox.classList.remove('hidden');
+            showQ();
+        }
+
+        function showQ() {
+            const qData = quizData[currentS][currentC][currentI];
+            sub.innerText = `${currentC} (${currentI + 1}/15)`;
+            let html = `<div style="font-size:1.3rem; margin-bottom:20px; font-weight:600; line-height:1.4;">${qData.q}</div>`;
+            qData.options.forEach((o, i) => html += `<button class="option" onclick="check(${i})">${o}</button>`);
+            app.innerHTML = html + `<div id="exp" class="explanation"></div><button id="next" class="next-btn hidden" onclick="next()">Next</button>`;
+            startTimer();
+        }
+
+        window.check = (idx) => {
+            clearInterval(timerObj);
+            const qData = quizData[currentS][currentC][currentI];
+            const btns = document.querySelectorAll('.option');
+            btns.forEach(b => b.disabled = true);
+            
+            if (idx === qData.answer) {
+                btns[idx].classList.add('correct');
+                score++;
+            } else {
+                if(idx !== -1) btns[idx].classList.add('wrong');
+                btns[qData.answer].classList.add('correct');
+            }
+            
+            const exp = document.getElementById('exp');
+            exp.innerHTML = `<strong>Board Note:</strong> ${qData.explanation}`;
+            exp.style.display = 'block';
+            document.getElementById('next').classList.remove('hidden');
+        };
+
+        window.next = () => {
+            currentI++;
+            if (currentI < 15) showQ();
+            else finish();
+        }
+
+        function finish() {
+            saveHighScore(currentC, score);
+            timerBox.classList.add('hidden');
+            sub.innerText = "Exam Completed";
+            const percent = Math.round(score/15*100);
+            app.innerHTML = `<div style="text-align:center; padding: 20px;">
+                <h2 style="font-size:3.5rem; color:${percent >= 80 ? 'var(--ios-green)' : 'white'};">${percent}%</h2>
+                <p style="font-size:1.2rem; opacity:0.8;">You got ${score} out of 15 correct.</p>
+                <div style="margin-top:20px; font-size:0.9rem; opacity:0.6;">High Score for this chapter: ${getHighScore(currentC)}/15</div>
+                <button class="btn" onclick="init()" style="margin-top:30px; width:100%; text-align:center;">Return Home</button>
+            </div>`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
